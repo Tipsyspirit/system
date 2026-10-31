@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>System Status Window</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:dark;
+  --void:#000;
+  --panel:#07030f;
+  --line:#c9b8ff;
+  --glow:#8a3ffc;
+  --glow-hi:#b784ff;
+  --glow-dim:#3b1a78;
+  --text:#f1ecff;
+  --muted:#9d8fc4;
+  --ok:#7dffcf;--gr:138,63,252;
+  --display:"Orbitron","Eurostile","Bahnschrift",system-ui,sans-serif;
+  --body:"Rajdhani","Bahnschrift","Segoe UI",system-ui,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;min-height:100%;background:var(--void);color:var(--text);
+  font-family:var(--body);font-size:18px;line-height:1.35;
+  display:flex;justify-content:center;
+  background-image:
+    radial-gradient(900px 500px at 50% -10%,rgba(var(--gr),.28),transparent 70%),
+    linear-gradient(rgba(var(--gr),.07) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(var(--gr),.07) 1px,transparent 1px);
+  background-size:auto,44px 44px,44px 44px;
+}
+main{width:100%;max-width:560px;padding:28px 18px 40px}
+h1,h2,h3{font-family:var(--display);font-weight:700;margin:0;letter-spacing:.04em}
+button,input,select{font:inherit;color:inherit}
+
+/* HUD panel: slanted corners, double outline, purple bloom */
+.panel{
+  position:relative;background:linear-gradient(160deg,#0b0518,var(--panel));
+  padding:26px 22px;
+  clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
+  outline:0;
+}
+.frame{position:relative;filter:drop-shadow(0 0 14px rgba(var(--gr),.65)) drop-shadow(0 0 40px rgba(var(--gr),.25))}
+.frame>.panel{box-shadow:inset 0 0 0 1.5px var(--line),inset 0 0 28px rgba(var(--gr),.28)}
+.frame::before{content:"";position:absolute;inset:-5px;z-index:-1;background:var(--glow-dim);
+  clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px);opacity:.55}
+
+.brand{text-align:center;margin:8px 0 26px}
+.brand h1{font-size:clamp(22px,6.5vw,32px);color:#fff;text-shadow:0 0 8px var(--glow-hi),0 0 26px var(--glow)}
+.brand p{margin:8px 0 0;color:var(--muted);font-size:17px}
+
+.tabs{display:flex;margin-bottom:20px;border-bottom:1px solid var(--glow-dim)}
+.tabs button{flex:1;background:none;border:0;padding:10px 0;color:var(--muted);cursor:pointer;font-weight:600;font-size:18px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected=true]{color:#fff;border-color:var(--glow-hi);text-shadow:0 0 10px var(--glow)}
+
+label{display:block;margin:0 0 14px;color:var(--muted);font-weight:600;font-size:16px}
+input,select{
+  display:block;width:100%;margin-top:6px;padding:12px 14px;background:#000;
+  border:1px solid var(--glow-dim);color:var(--text);font-size:18px;border-radius:0;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+}
+input:focus,select:focus{outline:2px solid var(--glow-hi);outline-offset:1px;box-shadow:0 0 16px rgba(var(--gr),.6)}
+input::placeholder{color:color-mix(in srgb,var(--muted) 55%,#000)}
+
+.btn{
+  width:100%;margin-top:8px;padding:14px;cursor:pointer;border:0;font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.08em;
+  color:#fff;background:linear-gradient(180deg,color-mix(in srgb,var(--glow) 60%,#000),color-mix(in srgb,var(--glow) 28%,#000));
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+  box-shadow:0 0 22px rgba(var(--gr),.8);text-shadow:0 0 8px rgba(255,255,255,.6);
+  transition:filter .15s,transform .15s;
+}
+.btn:hover{filter:brightness(1.2)}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible,.tabs button:focus-visible,.chip:focus-visible,.quest button:focus-visible,.link:focus-visible{outline:2px solid var(--ok);outline-offset:3px}
+.btn.ghost{background:transparent;box-shadow:inset 0 0 0 1px var(--glow-dim);text-shadow:none;color:var(--muted)}
+.link{background:none;border:0;color:var(--muted);cursor:pointer;text-decoration:underline;padding:6px;font-size:16px}
+.note{color:var(--muted);font-size:15px;margin:14px 0 0;text-align:center}
+.err{color:#ff8aa8;font-size:16px;min-height:22px;margin:0 0 6px}
+
+/* onboarding */
+.steps{display:flex;gap:6px;margin-bottom:20px}
+.steps i{flex:1;height:4px;background:var(--glow-dim)}
+.steps i.on{background:var(--glow-hi);box-shadow:0 0 10px var(--glow)}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 18px}
+.chip{padding:9px 16px;background:#000;border:1px solid var(--glow-dim);color:var(--muted);cursor:pointer;font-weight:600}
+.chip[aria-pressed=true]{color:#fff;border-color:var(--glow-hi);background:rgba(var(--gr),.25);box-shadow:0 0 14px rgba(var(--gr),.6)}
+h2.step-title{font-size:19px;margin-bottom:6px}
+.sub{color:var(--muted);margin:0 0 18px}
+
+/* status window */
+.sw-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--glow-dim);margin-bottom:18px}
+.sw-head h2{font-size:15px;color:var(--glow-hi);text-shadow:0 0 10px var(--glow)}
+.identity{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;align-items:end;margin-bottom:20px}
+.lvl{grid-row:span 2;text-align:center}
+.lvl b{display:block;font-family:var(--display);font-size:54px;line-height:1;color:#fff;text-shadow:0 0 12px var(--glow-hi),0 0 36px var(--glow)}
+.lvl span{color:var(--muted);font-size:15px}
+.name{font-family:var(--display);font-size:20px;word-break:break-word}
+.meta{color:var(--muted);font-size:16px}
+
+.bar{margin:14px 0}
+.bar .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.bar .row span:first-child{font-family:var(--display);font-weight:700;font-size:20px;color:#fff;text-shadow:0 0 8px var(--glow)}
+.bar .row span:last-child{color:var(--muted);font-size:16px}
+.track{height:18px;border:1.5px solid var(--line);border-radius:12px;padding:3px;box-shadow:0 0 12px rgba(var(--gr),.5),inset 0 0 8px rgba(var(--gr),.4)}
+.fill{height:100%;border-radius:8px;background:linear-gradient(90deg,color-mix(in srgb,var(--glow) 45%,#000),var(--glow-hi));box-shadow:0 0 12px var(--glow-hi);transition:width .7s cubic-bezier(.2,.8,.2,1);min-width:4px}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;margin:22px 0}
+.stat{display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--glow-dim);padding:6px 0 10px}
+.stat .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.stat span{color:var(--muted)}
+.stat b{font-family:var(--display);font-size:17px;color:#fff;text-shadow:0 0 8px var(--glow)}
+.stat .xpc{color:var(--muted);font-size:14px}
+
+h3.sec{font-size:14px;color:var(--glow-hi);margin:24px 0 10px}
+.quest{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--glow-dim)}
+.quest button{flex:none;width:30px;height:30px;background:#000;border:1.5px solid var(--line);cursor:pointer;color:transparent;box-shadow:0 0 10px rgba(var(--gr),.5);font-size:18px;line-height:1}
+.quest.done button{background:rgba(125,255,207,.15);border-color:var(--ok);color:var(--ok);box-shadow:0 0 12px rgba(125,255,207,.5)}
+.quest .t{flex:1}
+.quest.done .t{color:var(--muted);text-decoration:line-through}
+.quest .xp{color:var(--glow-hi);font-weight:700}
+.empty{color:var(--muted);padding:10px 0}
+.add{display:flex;gap:10px;margin-top:14px}
+.add input{margin:0}
+.add .btn{width:auto;margin:0;padding:0 20px}
+
+.sync{display:inline-flex;align-items:center;gap:8px;font-size:15px;color:var(--muted)}
+.sync i{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+.sync.off i{background:#ffb347;box-shadow:0 0 10px #ffb347}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,30px);opacity:0;pointer-events:none;
+  padding:12px 22px;background:#07030f;border:1.5px solid var(--glow-hi);box-shadow:0 0 28px var(--glow);font-family:var(--display);font-size:14px;transition:.35s;z-index:5;text-align:center;white-space:pre-line;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+.nav{display:flex;gap:6px;margin:-4px 0 18px}
+.nav button{flex:1;padding:9px 0;background:#000;border:1px solid var(--glow-dim);color:var(--muted);cursor:pointer;font-weight:700;font-size:17px}
+.nav button[aria-selected=true]{color:#fff;border-color:var(--glow-hi);background:rgba(var(--gr),.25);box-shadow:0 0 14px rgba(var(--gr),.6)}
+.nav button:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
+textarea{display:block;width:100%;margin-top:6px;padding:12px 14px;background:#000;border:1px solid var(--glow-dim);color:var(--text);font:inherit;font-size:17px;border-radius:0;resize:vertical}
+textarea:focus{outline:2px solid var(--glow-hi);outline-offset:1px;box-shadow:0 0 16px rgba(var(--gr),.6)}
+.stats-h{display:flex;justify-content:space-between;align-items:baseline;margin-top:22px}
+.stats-h h3{margin:0}
+#pts{color:var(--muted);font-size:15px}
+.stats{margin-top:8px}
+.badge{flex:none;padding:2px 9px;border:1px solid;font-size:14px;font-weight:700;box-shadow:0 0 8px currentColor;background:#000}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.goal{border:1px solid var(--glow-dim);padding:14px;margin-bottom:18px;background:rgba(var(--gr),.05)}
+.gh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px}
+.gh h4{margin:0;font-family:var(--display);font-size:16px;word-break:break-word}
+.tag{color:var(--glow-hi);font-size:15px;white-space:nowrap}
+.cnt{color:var(--muted);font-size:15px;margin-top:4px}
+.track.s{height:10px;padding:2px;border-width:1px;border-radius:8px}
+.ms{margin-top:16px;padding-top:12px;border-top:1px dashed var(--glow-dim)}
+.mh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.mini{display:flex;gap:8px;margin-top:10px}
+.mini input,.mini select{margin:0;padding:9px 10px;font-size:16px;min-width:0}
+.mini input{flex:1}
+.mini select{width:auto;flex:none;max-width:44%}
+.mini .btn{width:auto;margin:0;padding:0 14px;font-size:13px;flex:none}
+.quest .t small{display:block;color:var(--muted);font-size:14px}
+.quest .t small.hint{color:var(--glow-hi)}
+.sums{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:6px 0 14px}
+.sum{border:1px solid var(--glow-dim);padding:10px 6px;text-align:center}
+.sum b{display:block;font-family:var(--display);font-size:24px;color:#fff;text-shadow:0 0 10px var(--glow)}
+.sum span{color:var(--muted);font-size:14px}
+.past{border-bottom:1px solid var(--glow-dim);padding:10px 0}
+.past b{color:var(--glow-hi);word-break:break-word}
+.past p{margin:4px 0 0;color:var(--muted);font-size:16px;word-break:break-word}
+.sheet{margin-bottom:6px}
+.sheet .btn{margin-top:4px}
+
+@keyframes flash{0%{filter:brightness(2.4)}100%{filter:none}}
+.flash{animation:flash .9s ease-out}
+/* one entrance moment: panel scans in */
+@keyframes boot{from{opacity:0;filter:brightness(2.2) blur(3px);transform:scaleY(.94)}to{opacity:1;filter:none;transform:none}}
+.boot{animation:boot .7s ease-out both}
+@media (prefers-reduced-motion:reduce){.boot,.flash{animation:none}.fill,.toast,.btn{transition:none}}
+[hidden]{display:none!important}
+</style>
+
+<main>
+  <div class="brand">
+    <h1>THE SYSTEM</h1>
+    <p id="tagline">Turn real progress into levels.</p>
+  </div>
+
+  <!-- AUTH -->
+  <section id="auth" class="frame boot" aria-label="Sign in">
+    <div class="panel">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-in" aria-selected="true">Sign in</button>
+        <button role="tab" id="tab-up" aria-selected="false">Create account</button>
+      </div>
+      <p class="err" id="auth-err" role="alert"></p>
+      <label>Email<input id="email" type="email" autocomplete="email" placeholder="player@example.com"></label>
+      <label>Password<input id="pass" type="password" autocomplete="current-password" placeholder="At least 8 characters"></label>
+      <button class="btn" id="auth-go">Sign in</button>
+      <p class="note">Your progress is saved to your account on this server.</p>
+    </div>
+  </section>
+
+  <!-- ONBOARDING -->
+  <section id="onb" class="frame boot" aria-label="Create your player" hidden>
+    <div class="panel">
+      <div class="steps" aria-hidden="true"><i></i><i></i><i></i></div>
+
+      <div data-step="0">
+        <h2 class="step-title">Who are you?</h2>
+        <p class="sub">This is what your status window will show.</p>
+        <p class="err" id="onb-err" role="alert"></p>
+        <label>Player name<input id="pname" maxlength="24" autocomplete="nickname" placeholder="Your name"></label>
+        <label>Age<input id="page" type="number" min="5" max="120" inputmode="numeric" placeholder="Optional"></label>
+        <label>Current job or role<input id="pjob" maxlength="30" placeholder="Student, Designer, Nurse..."></label>
+      </div>
+
+      <div data-step="1" hidden>
+        <h2 class="step-title">Where do you want to grow?</h2>
+        <p class="sub">Pick one or more. Your first pick sets the stat your first goal raises. Every stat starts at 5 and grows only from logged actions.</p>
+        <div class="chips" id="domains"></div>
+      </div>
+
+      <div data-step="2" hidden>
+        <h2 class="step-title">Your first quest</h2>
+        <p class="sub">One small action you can finish this week.</p>
+        <label>Quest<input id="pquest" maxlength="60" placeholder="Walk for 20 minutes"></label>
+        <label>Difficulty
+          <select id="pdiff">
+            <option value="common">Common: 20 XP, 15 min or less</option>
+            <option value="rare" selected>Rare: 50 XP, 15 to 60 min</option>
+            <option value="epic">Epic: 100 XP, multi-session, needs proof</option>
+          </select>
+        </label>
+      </div>
+
+      <button class="btn" id="onb-next">Continue</button>
+      <button class="btn ghost" id="onb-back" hidden>Back</button>
+    </div>
+  </section>
+
+  <!-- STATUS WINDOW -->
+  <section id="sw" class="frame boot" aria-label="System" hidden>
+    <div class="panel">
+      <div class="sw-head">
+        <h2 id="hd">SYSTEM</h2>
+        <span class="sync" id="sync"><i></i><span id="sync-t">Online</span></span>
+      </div>
+      <div class="nav" role="tablist">
+        <button role="tab" data-v="status" aria-selected="true">Status</button>
+        <button role="tab" data-v="quests" aria-selected="false">Quests</button>
+        <button role="tab" data-v="review" aria-selected="false">Review</button>
+      </div>
+
+      <div id="sheet" class="sheet" hidden></div>
+
+      <div id="v-status">
+        <div class="identity">
+          <div class="lvl"><b id="lv">1</b><span>Level</span></div>
+          <div class="name" id="nm"></div>
+          <div class="meta" id="mt"></div>
+        </div>
+        <div class="bar">
+          <div class="row"><span>XP</span><span id="xp-t"></span></div>
+          <div class="track"><div class="fill" id="xp-f"></div></div>
+        </div>
+        <div class="bar">
+          <div class="row"><span>MP</span><span id="mp-t"></span></div>
+          <div class="track"><div class="fill" id="mp-f"></div></div>
+        </div>
+        <div class="cnt" id="ncls"></div>
+        <div class="stats-h"><h3 class="sec">STATS</h3><span id="pts"></span></div>
+        <div class="stats" id="stats"></div>
+        <h3 class="sec">NEXT UP</h3>
+        <div id="nextup"></div>
+        <h3 class="sec">LOG</h3>
+        <div id="log"></div>
+      </div>
+      <div id="v-quests" hidden></div>
+      <div id="v-review" hidden></div>
+
+      <div style="margin-top:26px;display:flex;justify-content:space-between">
+        <button class="link" id="signout">Sign out</button>
+        <button class="link" id="reset">Reset player</button>
+      </div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

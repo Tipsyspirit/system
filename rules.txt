@@ -1,0 +1,233 @@
+# =====================================================================
+# rules.txt  -  single source of truth for THE SYSTEM
+# Works like requirements.txt: the backend refuses to start if this file
+# is missing, malformed, or breaks an invariant. Nothing in the code
+# hardcodes these numbers. Change a number here, restart, done.
+#
+# Format: INI. "key = value". Lists are comma-separated.
+# Every rule that affects stats must be explainable from a logged action.
+# =====================================================================
+
+[meta]
+rules_version = 1.0.0
+app_name      = THE SYSTEM
+principle     = The status window is an audit trail, not a character sheet.
+
+# ---------------------------------------------------------------------
+# INVARIANTS: checked at startup and by the test suite. Break one and
+# the app will not boot. These are the golden rules.
+# ---------------------------------------------------------------------
+[invariants]
+manual_stat_points      = false   # no spending points on stats
+buy_stats               = false
+random_stat_rewards     = false
+stat_loss_on_inactivity = false   # missed days never subtract stats
+level_loss              = false
+reward_app_opens        = false   # opening/scrolling/planning gives nothing
+ml_may_change_rewards   = false   # the model suggests, it never pays out
+history_rewritable      = false   # reviews cannot edit past XP
+
+# ---------------------------------------------------------------------
+# STATS
+# ---------------------------------------------------------------------
+[stats]
+keys        = STR, FOC, KNO, VIT, SOC
+start_level = 5
+# XP needed to go from level L to L+1:  10 + 10 * L
+req_base    = 10
+req_per_lvl = 10
+
+[stats.labels]
+STR = Strength
+FOC = Focus
+KNO = Knowledge
+VIT = Vitality
+SOC = Social
+
+# ---------------------------------------------------------------------
+# STAT XP:  base(rarity) x effort x evidence x repeat x comeback
+# ---------------------------------------------------------------------
+[rarity.stat_xp]
+common    = 4
+rare      = 10
+epic      = 22
+legendary = 45
+
+[rarity.overall_xp]
+common    = 20
+rare      = 50
+epic      = 100
+legendary = 200
+
+# Rarity must mean something. Time is in minutes, resistance is 1-5.
+[rarity.rules]
+common_max_minutes    = 15
+rare_max_minutes      = 60
+epic_min_resistance   = 4
+epic_needs_multi_session_or_outcome = true
+common_must_be_repeatable = true
+# Which evidence levels each rarity requires (any of the listed).
+epic_requires_evidence      = proof, proof_reflection
+legendary_requires_evidence = proof_reflection
+legendary_requires_review   = true
+
+[effort.multiplier]
+1 = 0.6
+2 = 0.8
+3 = 1.0
+4 = 1.2
+5 = 1.4
+
+[evidence.multiplier]
+none             = 0.8
+note             = 1.0
+proof            = 1.1
+proof_reflection = 1.15
+
+# Same quest, same local day.
+[repeat.multiplier]
+first   = 1.0
+second  = 0.5
+third_plus = 0.1
+
+# ---------------------------------------------------------------------
+# BONUSES (flagged in the log, exempt from daily caps)
+# ---------------------------------------------------------------------
+[bonus]
+milestone_stat_xp = 30
+milestone_overall_xp = 50
+goal_stat_xp      = 80
+
+# ---------------------------------------------------------------------
+# CAPS
+# ---------------------------------------------------------------------
+[caps]
+overall_xp_per_day = 200
+stat_xp_per_day_per_stat = 40
+bonuses_exempt = true
+
+# ---------------------------------------------------------------------
+# OVERALL LEVEL
+# need(level) = 100 + (level - 1) * 60
+# ---------------------------------------------------------------------
+[level]
+need_base    = 100
+need_per_lvl = 60
+mp_max       = 100
+mp_cost_per_quest = 10
+level_up_restores_mp = true
+stat_points_on_level_up = 0
+
+[level.tiers]
+# name = minimum overall level
+Awakened Novice    = 1
+Consistent Builder = 3
+Rising Hunter      = 6
+Shadow Monarch     = 10
+
+[level.classes]
+# name = minimum overall level (cosmetic theme of the status window)
+Common    = 1
+Rare      = 5
+Epic      = 10
+Legendary = 20
+Mythic    = 35
+
+# ---------------------------------------------------------------------
+# TITLES come from the stat profile, never from a manual choice.
+# ---------------------------------------------------------------------
+[titles]
+single_top_min_level = 8
+STR = Vanguard
+FOC = Executor
+KNO = Scholar
+VIT = Iron Body
+SOC = Connector
+balanced_title = All-Rounder
+# All-Rounder: two or more stats within this many levels of the top stat
+balanced_within_levels = 1
+balanced_min_top_level = 6
+
+# ---------------------------------------------------------------------
+# NO PUNISHMENT, but maintenance realism
+# ---------------------------------------------------------------------
+[rest]
+resting_after_days   = 30
+comeback_multiplier  = 1.2
+comeback_applies_to  = first_quest_back
+
+# ---------------------------------------------------------------------
+# WEEKLY REVIEW: calibrates, never rewrites history
+# ---------------------------------------------------------------------
+[review]
+overall_xp = 25
+stat_xp    = 5
+stat       = FOC
+restore_mp = true
+once_per_week = true
+week_starts_on = monday
+requires_content = true
+
+# ---------------------------------------------------------------------
+# SUGGESTIONS (shown to the user, never automatic)
+# ---------------------------------------------------------------------
+[suggest]
+easy_rating_max       = 2
+easy_streak_to_raise  = 3
+stale_quest_days      = 14
+
+# ---------------------------------------------------------------------
+# ML: the evolving model. It may only ADVISE. See [invariants].
+# It learns from logged completions, skips and effort ratings.
+# ---------------------------------------------------------------------
+[ml]
+enabled              = true
+model                = online_logistic_regression
+features             = rarity_rank, est_minutes, resistance, hour_sin, hour_cos, weekday_sin, weekday_cos, streak_days, recent_completion_rate, stat_level_norm
+learning_rate        = 0.05
+l2                   = 0.001
+min_samples_to_adapt = 10
+# Evolution guards: a single update can never move a weight by more than this.
+max_weight_step      = 0.5
+# Snapshots allow rollback if accuracy drops.
+snapshot_every       = 25
+keep_snapshots       = 10
+rollback_if_accuracy_drop = 0.10
+# Rarity suggestion nudges: blend of rule-based rarity and learned effort.
+effort_ema_alpha     = 0.2
+raise_rarity_if_avg_effort_below = 2.0
+lower_rarity_if_avg_effort_above = 4.5
+# Probability thresholds for advice
+low_completion_probability  = 0.35
+high_completion_probability = 0.80
+
+# ---------------------------------------------------------------------
+# BACKEND
+# ---------------------------------------------------------------------
+[backend]
+framework   = fastapi
+database    = sqlite
+db_path     = data/system.db
+host        = 127.0.0.1
+port        = 8000
+token_ttl_hours = 720
+password_min_length = 8
+log_rules_hash_with_each_event = true
+
+# ---------------------------------------------------------------------
+# FRONTEND
+# ---------------------------------------------------------------------
+[frontend]
+ui_locked   = true      # visual design is fixed; only data and logic change
+static_dir  = frontend
+fetch_rules_on_boot = true
+
+# ---------------------------------------------------------------------
+# STACK (like requirements.txt, pinned lower bounds)
+# ---------------------------------------------------------------------
+[stack]
+python  = >=3.11
+fastapi = >=0.110
+uvicorn = >=0.29
+pytest  = >=8.0
+httpx   = >=0.27
